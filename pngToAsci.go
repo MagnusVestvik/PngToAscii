@@ -2,22 +2,23 @@ package main
 
 import (
 	"fmt"
+	"github.com/nfnt/resize"
 	"image"
-	_ "image/png"
 	_ "image/jpeg"
+	_ "image/png"
 	"os"
 	"strings"
-	"log"
-	"github.com/nfnt/resize"
 )
+
 /*
-var asciiChars = []string{
-	"@","%","#","*","+","=","-",";",":","."," ",
-}
+	var asciiChars = []string{
+		"@","%","#","*","+","=","-",";",":","."," ",
+	}
 */
 var asciiChars = []string{
 	"@", "@", "@", "%", "%", "#", "*", "*", "+", "+", "=", "-", "-", ":", ".", " ", " ",
 }
+
 func mapIntensityToASCII(intensity int) string {
 	asciiIndex := (intensity * len(asciiChars)) / 256 % len(asciiChars)
 	return asciiChars[asciiIndex]
@@ -25,7 +26,7 @@ func mapIntensityToASCII(intensity int) string {
 
 func extractRgbValues(image image.Image) [][]int {
 	bounds := image.Bounds()
-	width, height := bounds.Max.X, bounds.Max.Y
+	height, width := bounds.Max.Y, bounds.Max.X
 	rgbValues := make([][]int, height)
 
 	for i := range rgbValues {
@@ -36,7 +37,7 @@ func extractRgbValues(image image.Image) [][]int {
 		for x := 0; x < width; x++ {
 			r, g, b, _ := image.At(x, y).RGBA()
 			gray := 0.299*float64(r) + 0.587*float64(g) + 0.114*float64(b) // convert to grayscale
-			rgbValues[y][x] = int(gray)>>8 // scaling down the colors to 255
+			rgbValues[y][x] = int(gray) >> 8                               // scaling down the colors to 255
 		}
 	}
 	return rgbValues
@@ -44,10 +45,10 @@ func extractRgbValues(image image.Image) [][]int {
 
 func mapRgbToASCII(image [][]int) [][]string {
 	height, width := len(image), len(image[0])
-	asciiChars := make([][]string, len(image))
+	asciiChars := make([][]string, height)
 
-	for i := 0; i < height; i++ {
-		asciiChars[i] = make([]string, width)
+	for x := 0; x < height; x++ {
+		asciiChars[x] = make([]string, width)
 	}
 
 	for y := 0; y < height; y++ {
@@ -60,8 +61,7 @@ func mapRgbToASCII(image [][]int) [][]string {
 
 func drawImage(image [][]string) {
 	drawnImage := strings.Builder{}
-	height := len(image)
-	width := len(image[0])
+	height, width := len(image), len(image[0])
 	for i := 0; i < height; i++ {
 		for j := 0; j < width; j++ {
 			drawnImage.WriteString(image[i][j])
@@ -71,26 +71,26 @@ func drawImage(image [][]string) {
 	fmt.Println(drawnImage.String())
 	file, err := os.OpenFile("asciArt.txt", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Could create file... ", err)
 	}
 	defer file.Close()
 
 	data := []byte(drawnImage.String())
 	_, err = file.Write(data)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println("Somthing went wrong, could not write to file... ", err)
 	}
 
 	err = file.Sync()
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 	}
 }
 
-func resizeImg(img image.Image, width uint) image.Image{
+func resizeImg(img image.Image, width uint) image.Image {
 	oldWidth := img.Bounds().Dx()
 	oldHeight := img.Bounds().Dy()
-	newHeight := uint((float64(width)/float64(oldWidth))*float64(oldHeight))
+	newHeight := uint((float64(width) / float64(oldWidth)) * float64(oldHeight))
 	img = resize.Resize(width, newHeight, img, resize.Lanczos3)
 	return img
 }
@@ -114,10 +114,10 @@ func main() {
 		fmt.Println("Whoops an error occurred when trying to decode the image", err)
 		return
 	}
-	
-	//const width uint = 430
-	//img = resizeImg(img, width)
-	
+
+	const width uint = 430
+	img = resizeImg(img, width)
+
 	rgbValues := extractRgbValues(img)
 
 	asciiImage := mapRgbToASCII(rgbValues)
