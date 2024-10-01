@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/gdamore/tcell/v2"
 	"github.com/nfnt/resize"
 	"image"
 	_ "image/jpeg"
@@ -17,6 +18,18 @@ import (
 */
 var asciiChars = []string{
 	"@", "@", "@", "%", "%", "#", "*", "*", "+", "+", "=", "-", "-", ":", ".", " ", " ",
+}
+
+func getTerminalSize() (int, int) {
+	screen, err := tcell.NewScreen()
+	if err != nil {
+		panic(err)
+	}
+	defer screen.Fini()
+
+	screen.Init()
+	width, height := screen.Size()
+	return width, height
 }
 
 func mapIntensityToASCII(intensity int) string {
@@ -87,12 +100,12 @@ func drawImage(image [][]string) {
 	}
 }
 
-func resizeImg(img image.Image, width uint) image.Image {
-	oldWidth := img.Bounds().Dx()
-	oldHeight := img.Bounds().Dy()
-	newHeight := uint((float64(width) / float64(oldWidth)) * float64(oldHeight))
-	img = resize.Resize(width, newHeight, img, resize.Lanczos3)
-	return img
+func resizeImg(img image.Image) image.Image {
+	width, height := getTerminalSize()
+	newWidth := uint(width)
+	newHeight := uint(height)
+	resizedImage := resize.Resize(newWidth, newHeight, img, resize.Lanczos3)
+	return resizedImage
 }
 
 func main() {
@@ -114,9 +127,7 @@ func main() {
 		fmt.Println("Whoops an error occurred when trying to decode the image", err)
 		return
 	}
-
-	const width uint = 430
-	img = resizeImg(img, width)
+	img = resizeImg(img)
 
 	rgbValues := extractRgbValues(img)
 
